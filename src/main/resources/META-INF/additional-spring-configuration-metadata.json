@@ -1,0 +1,8 @@
+{
+  "properties": [
+    {
+      "name": "backender.welcome_message",
+      "type": "java.lang.String",
+      "description": "Description for backender.welcome_message."
+  }
+] }
