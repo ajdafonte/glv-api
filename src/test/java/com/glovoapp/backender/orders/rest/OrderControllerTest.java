@@ -2,6 +2,9 @@ package com.glovoapp.backender.orders.rest;
 
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
 import java.util.Collections;
@@ -22,14 +25,15 @@ import com.glovoapp.backender.common.error.BackenderApiError;
 import com.glovoapp.backender.common.error.BackenderApiException;
 import com.glovoapp.backender.orders.domain.Order;
 import com.glovoapp.backender.orders.service.OrderService;
+import com.google.gson.Gson;
 
 
 /**
- * TODO - Improve data assertions and mock data
+ *
  */
 @ExtendWith(SpringExtension.class)
 @WebMvcTest(OrderController.class)
-public class OrderControllerTest
+class OrderControllerTest
 {
     @Autowired
     private MockMvc mvc;
@@ -38,7 +42,7 @@ public class OrderControllerTest
     private OrderService orderService;
 
     @Test
-    public void givenOrders_whenGetAllOrders_thenReturnAllOrders() throws Exception
+    void givenOrders_whenGetAllOrders_thenReturnAllOrders() throws Exception
     {
         // given
         final Order oneOrder = new Order()
@@ -46,7 +50,7 @@ public class OrderControllerTest
             .withDescription("I want a pizza cut into very small slices");
         final List<Order> allOrders = Collections.singletonList(oneOrder);
         doReturn(allOrders).when(orderService).findAll();
-//            given(orderService.findAll()).willReturn(allOrders);
+        final String expectedContent = generateSuccessBody(allOrders);
 
         // when
         final ResultActions result = mvc.perform(get("/orders")
@@ -54,38 +58,47 @@ public class OrderControllerTest
 
         // then
         result.andExpect(MockMvcResultMatchers.status().isOk());
+        result.andExpect(MockMvcResultMatchers.content().string(expectedContent));
+        verify(orderService, times(1)).findAll();
+        verifyNoMoreInteractions(orderService);
+    }
+
+    private String generateSuccessBody(final List<Order> orders)
+    {
+        return new Gson().toJson(orders);
     }
 
     @Test
-    public void givenExistentCourier_whenGetOrdersForCourier_thenReturnSetOfOrders() throws Exception
+    void givenExistentCourier_whenGetOrdersForCourier_thenReturnSetOfOrders() throws Exception
     {
         // given
         final Order oneOrder = new Order()
             .withId("order-1")
             .withDescription("I want a pizza cut into very small slices");
-
         final List<Order> allOrders = Collections.singletonList(oneOrder);
-
-        doReturn(allOrders).when(orderService).findAllBy("courier-1");
-//        given(orderService.findAllBy("courier-1")).willReturn(allOrders);
+        final String expectedContent = generateSuccessBody(allOrders);
+        final String targetCourier = "courier-1";
+        doReturn(allOrders).when(orderService).findAllBy(targetCourier);
 
         // when
-        final ResultActions result = mvc.perform(get("/orders/{courierId}", "courier-1")
+        final ResultActions result = mvc.perform(get("/orders/{courierId}", targetCourier)
             .contentType(MediaType.APPLICATION_JSON_UTF8_VALUE));
 
         // then
         result.andExpect(MockMvcResultMatchers.status().isOk());
+        result.andExpect(MockMvcResultMatchers.content().string(expectedContent));
+        verify(orderService, times(1)).findAllBy(targetCourier);
+        verifyNoMoreInteractions(orderService);
     }
 
     @Test
-    public void givenUnknownCourier_whenGetOrdersForCourier_thenReturnNotFoundError() throws Exception
+    void givenUnknownCourier_whenGetOrdersForCourier_thenReturnNotFoundError() throws Exception
     {
         // given
         final String unknownCourierId = "courier-2";
         doThrow(new BackenderApiException(BackenderApiError.UNKNOWN_RESOURCE, "Unknown resource"))
             .when(orderService)
             .findAllBy(unknownCourierId);
-//        given(orderService.findAllBy()).willThrow(new BackenderApiException(BackenderApiError.UNKNOWN_RESOURCE, "Unknown resource"));
 
         // then
         final ResultActions result = mvc.perform(get("/orders/{courierId}", unknownCourierId)
@@ -93,5 +106,8 @@ public class OrderControllerTest
 
         // then
         result.andExpect(MockMvcResultMatchers.status().is4xxClientError());
+        // TODO - validate content of body response ??
+        verify(orderService, times(1)).findAllBy(unknownCourierId);
+        verifyNoMoreInteractions(orderService);
     }
 }

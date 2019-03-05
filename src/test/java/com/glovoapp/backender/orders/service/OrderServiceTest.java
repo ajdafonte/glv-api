@@ -14,7 +14,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.glovoapp.backender.common.error.BackenderApiException;
 import com.glovoapp.backender.orders.domain.Courier;
-import com.glovoapp.backender.orders.domain.Location;
 import com.glovoapp.backender.orders.domain.Order;
 import com.glovoapp.backender.orders.domain.Vehicle;
 import com.glovoapp.backender.orders.repo.CourierRepository;
@@ -22,11 +21,46 @@ import com.glovoapp.backender.orders.repo.OrderRepository;
 
 
 /**
- * TODO - Refactor tests
+ *
  */
 @ExtendWith(MockitoExtension.class)
-public class OrderServiceTest
+class OrderServiceTest
 {
+    private static final Order MOCK_ORDER1;
+    private static final Order MOCK_ORDER2;
+    private static final Order MOCK_ORDER3;
+    private static final Order MOCK_ORDER4;
+
+    static
+    {
+        // distance between pickup and delivery - (7 - 7,5)
+        MOCK_ORDER1 = generateOrder("order-1", "I want a hamburguer", LocationData.SARRIA, LocationData.BARCELONETA);
+        // distance between pickup and delivery - (0.5 m)
+        MOCK_ORDER2 = generateOrder("order-2", "I want a cake", LocationData.SARRIA, LocationData.LES_TRES_TORRES);
+        // distance between pickup and delivery - (14 - 15 km)
+        MOCK_ORDER3 = generateOrder("order-3", "I want a pizza cut into very small slices", LocationData.SARRIA, LocationData.BADALONA);
+        // distance between pickup and delivery - (0.5 m)
+        MOCK_ORDER4 = generateOrder("order-4", "I want bread", LocationData.SARRIA, LocationData.FRANCESC_MACIA);
+    }
+
+    private static Order generateOrder(final String id, final String description, final LocationData pickup, final LocationData delivery)
+    {
+        return new Order()
+            .withId(id)
+            .withDescription(description)
+            .withPickup(pickup.getLocation())
+            .withDelivery(delivery.getLocation());
+    }
+
+    private static Courier generateCourier(final String id, final LocationData current, final boolean hasBox, final Vehicle vehicle)
+    {
+        return new Courier()
+            .withId(id)
+            .withBox(hasBox)
+            .withVehicle(vehicle)
+            .withLocation(current.getLocation());
+    }
+
     @Mock
     private OrderRepository orderRepository;
 
@@ -36,13 +70,13 @@ public class OrderServiceTest
     private OrderService orderService;
 
     @BeforeEach
-    public void setUp()
+    void setUp()
     {
         this.orderService = new OrderServiceImpl(orderRepository, courierRepository);
     }
 
     @Test
-    public void givenOrders_whenFindAll_returnAllOrders()
+    void givenOrders_whenFindAll_returnAllOrders()
     {
         // given
         final Order oneOrder = new Order()
@@ -63,7 +97,7 @@ public class OrderServiceTest
     }
 
     @Test
-    public void givenNoOrders_whenFindAll_returnEmptySetOfOrders()
+    void givenNoOrders_whenFindAll_returnEmptySetOfOrders()
     {
         // given
         Mockito.when(orderRepository.findAll()).thenReturn(Collections.emptyList());
@@ -76,7 +110,7 @@ public class OrderServiceTest
     }
 
     @Test
-    public void givenUnknownCourier_whenFindOrdersByCourier_returnNotFoundException()
+    void givenUnknownCourier_whenFindOrdersByCourier_returnNotFoundException()
     {
         // given
         final String unknownCourierId = "unknownCourier";
@@ -88,37 +122,12 @@ public class OrderServiceTest
     }
 
     @Test
-    public void givenOrdersAndCourierWithBoxAndMotorcycle_whenFindOrdersByCourier_returnAvailableOrders()
+    void givenOrdersAndCourierWithBoxAndMotorcycle_whenFindOrdersByCourier_returnAvailableOrders()
     {
         // given
         final String courierId = "courierId";
-        final Location courierLocation = new Location(41.411094, 2.136922); // av. tibidado
-        final Courier courier = new Courier()
-            .withId(courierId)
-            .withBox(true)
-            .withVehicle(Vehicle.MOTORCYCLE)
-            .withLocation(courierLocation);
-        final Order order2 = new Order()
-            .withId("order-2")
-            .withDescription("I want a cake")
-            .withPickup(new Location(41.399056, 2.119070)) // sarria
-            .withDelivery(new Location(41.397889, 2.131156)); // les tres torres (0.5 m)
-        final Order order1 = new Order()
-            .withId("order-1")
-            .withDescription("I want a hamburguer")
-            .withPickup(new Location(41.399056, 2.119070)) // sarria
-            .withDelivery(new Location(41.382548, 2.185791)); // barceloneta (7 - 7,5)
-        final Order order3 = new Order()
-            .withId("order-3")
-            .withDescription("I want a pizza cut into very small slices")
-            .withPickup(new Location(41.399056, 2.119070)) // sarria
-            .withDelivery(new Location(41.448295, 2.249292)); // badalona (14 - 15 km)
-        final Order order4 = new Order()
-            .withId("order-4")
-            .withDescription("I want bread")
-            .withPickup(new Location(41.399056, 2.119070)) // sarria
-            .withDelivery(new Location(41.392690, 2.143239)); // francesc macia (tram) 2,5km
-        final List<Order> allOrders = Arrays.asList(order1, order2, order3, order4);
+        final Courier courier = generateCourier(courierId, LocationData.AV_TIBIDABO, true, Vehicle.MOTORCYCLE);
+        final List<Order> allOrders = Arrays.asList(MOCK_ORDER1, MOCK_ORDER2, MOCK_ORDER3, MOCK_ORDER4);
 
         Mockito.when(courierRepository.findById(courierId)).thenReturn(courier);
         Mockito.when(orderRepository.findAll()).thenReturn(allOrders);
@@ -132,38 +141,13 @@ public class OrderServiceTest
     }
 
     @Test
-    public void givenOrdersAndCourierWithBoxAndBicycle_whenFindOrdersByCourier_returnAvailableOrders()
+    void givenOrdersAndCourierWithBoxAndBicycle_whenFindOrdersByCourier_returnAvailableOrders()
     {
         // given
         final String courierId = "courierId";
-        final Location courierLocation = new Location(41.411094, 2.136922); // av. tibidado
-        final Courier courier = new Courier()
-            .withId(courierId)
-            .withBox(true)
-            .withVehicle(Vehicle.BICYCLE)
-            .withLocation(courierLocation);
-        final Order order2 = new Order()
-            .withId("order-2")
-            .withDescription("I want a cake")
-            .withPickup(new Location(41.399056, 2.119070)) // sarria
-            .withDelivery(new Location(41.397889, 2.131156)); // les tres torres (0.5 m)
-        final Order order1 = new Order()
-            .withId("order-1")
-            .withDescription("I want a hamburguer")
-            .withPickup(new Location(41.399056, 2.119070)) // sarria
-            .withDelivery(new Location(41.382548, 2.185791)); // barceloneta (7 - 7,5)
-        final Order order3 = new Order()
-            .withId("order-3")
-            .withDescription("I want a pizza cut into very small slices")
-            .withPickup(new Location(41.399056, 2.119070)) // sarria
-            .withDelivery(new Location(41.448295, 2.249292)); // badalona (14 - 15 km)
-        final Order order4 = new Order()
-            .withId("order-4")
-            .withDescription("I want bread")
-            .withPickup(new Location(41.399056, 2.119070)) // sarria
-            .withDelivery(new Location(41.392690, 2.143239)); // francesc macia (tram) 2,5km
-        final List<Order> allOrders = Arrays.asList(order1, order2, order3, order4);
-        final List<Order> expectedOrders = Arrays.asList(order2, order4);
+        final Courier courier = generateCourier(courierId, LocationData.AV_TIBIDABO, true, Vehicle.BICYCLE);
+        final List<Order> allOrders = Arrays.asList(MOCK_ORDER1, MOCK_ORDER2, MOCK_ORDER3, MOCK_ORDER4);
+        final List<Order> expectedOrders = Arrays.asList(MOCK_ORDER2, MOCK_ORDER4);
 //        final List<Order> expectedOrders = allOrders;
 
         Mockito.when(courierRepository.findById(courierId)).thenReturn(courier);
@@ -178,38 +162,13 @@ public class OrderServiceTest
     }
 
     @Test
-    public void givenOrdersAndCourierWithoutBoxAndMotorcycle_whenFindOrdersByCourier_returnAvailableOrders()
+    void givenOrdersAndCourierWithoutBoxAndMotorcycle_whenFindOrdersByCourier_returnAvailableOrders()
     {
-// given
+        // given
         final String courierId = "courierId";
-        final Location courierLocation = new Location(41.411094, 2.136922); // av. tibidado
-        final Courier courier = new Courier()
-            .withId(courierId)
-            .withBox(false)
-            .withVehicle(Vehicle.MOTORCYCLE)
-            .withLocation(courierLocation);
-        final Order order2 = new Order()
-            .withId("order-2")
-            .withDescription("I want a cake")
-            .withPickup(new Location(41.399056, 2.119070)) // sarria
-            .withDelivery(new Location(41.397889, 2.131156)); // les tres torres (0.5 m)
-        final Order order1 = new Order()
-            .withId("order-1")
-            .withDescription("I want a hamburguer")
-            .withPickup(new Location(41.399056, 2.119070)) // sarria
-            .withDelivery(new Location(41.382548, 2.185791)); // barceloneta (7 - 7,5)
-        final Order order3 = new Order()
-            .withId("order-3")
-            .withDescription("I want a pizza cut into very small slices")
-            .withPickup(new Location(41.399056, 2.119070)) // sarria
-            .withDelivery(new Location(41.448295, 2.249292)); // badalona (14 - 15 km)
-        final Order order4 = new Order()
-            .withId("order-4")
-            .withDescription("I want bread")
-            .withPickup(new Location(41.399056, 2.119070)) // sarria
-            .withDelivery(new Location(41.392690, 2.143239)); // francesc macia (tram) 2,5km
-        final List<Order> allOrders = Arrays.asList(order1, order2, order3, order4);
-        final List<Order> expectedOrders = Arrays.asList(order1, order4);
+        final Courier courier = generateCourier(courierId, LocationData.AV_TIBIDABO, false, Vehicle.MOTORCYCLE);
+        final List<Order> allOrders = Arrays.asList(MOCK_ORDER1, MOCK_ORDER2, MOCK_ORDER3, MOCK_ORDER4);
+        final List<Order> expectedOrders = Arrays.asList(MOCK_ORDER1, MOCK_ORDER4);
 
         Mockito.when(courierRepository.findById(courierId)).thenReturn(courier);
         Mockito.when(orderRepository.findAll()).thenReturn(allOrders);
@@ -223,39 +182,14 @@ public class OrderServiceTest
     }
 
     @Test
-    public void givenOrdersAndCourierWithoutBoxAndBicycle_whenFindOrdersByCourier_returnAvailableOrders()
+    void givenOrdersAndCourierWithoutBoxAndBicycle_whenFindOrdersByCourier_returnAvailableOrders()
     {
         // given
         final String courierId = "courierId";
-        final Location courierLocation = new Location(41.411094, 2.136922); // av. tibidado
-        final Courier courier = new Courier()
-            .withId(courierId)
-            .withBox(false)
-            .withVehicle(Vehicle.BICYCLE)
-            .withLocation(courierLocation);
-        final Order order2 = new Order()
-            .withId("order-2")
-            .withDescription("I want a cake")
-            .withPickup(new Location(41.399056, 2.119070)) // sarria
-            .withDelivery(new Location(41.397889, 2.131156)); // les tres torres (0.5 m)
-        final Order order1 = new Order()
-            .withId("order-1")
-            .withDescription("I want a hamburguer")
-            .withPickup(new Location(41.399056, 2.119070)) // sarria
-            .withDelivery(new Location(41.382548, 2.185791)); // barceloneta (7 - 7,5)
-        final Order order3 = new Order()
-            .withId("order-3")
-            .withDescription("I want a pizza cut into very small slices")
-            .withPickup(new Location(41.399056, 2.119070)) // sarria
-            .withDelivery(new Location(41.448295, 2.249292)); // badalona (14 - 15 km)
-        final Order order4 = new Order()
-            .withId("order-4")
-            .withDescription("I want bread")
-            .withPickup(new Location(41.399056, 2.119070)) // sarria
-            .withDelivery(new Location(41.392690, 2.143239)); // francesc macia (tram) 2,5km
-        final List<Order> allOrders = Arrays.asList(order1, order2, order3, order4);
+        final Courier courier = generateCourier(courierId, LocationData.AV_TIBIDABO, false, Vehicle.BICYCLE);
+        final List<Order> allOrders = Arrays.asList(MOCK_ORDER1, MOCK_ORDER2, MOCK_ORDER3, MOCK_ORDER4);
+        final List<Order> expectedOrders = Collections.singletonList(MOCK_ORDER4);
 //        final List<Order> expectedOrders = Arrays.asList(order1, order4);
-        final List<Order> expectedOrders = Arrays.asList(order4);
 
         Mockito.when(courierRepository.findById(courierId)).thenReturn(courier);
         Mockito.when(orderRepository.findAll()).thenReturn(allOrders);
